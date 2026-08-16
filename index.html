@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chinese Sentence Clause Builder</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --success: #10b981;
+      --error: #ef4444;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --tile-bg: #334155;
+      --tile-hover: #475569;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: var(--bg); color: var(--text); display: flex; justify-content: center; min-height: 100vh; padding: 20px; }
+    .container { max-width: 700px; width: 100%; display: flex; flex-direction: column; gap: 20px; }
+    
+    header { text-align: center; margin-bottom: 10px; }
+    h1 { font-size: 1.6rem; color: #60a5fa; margin-bottom: 6px; }
+    p.subtitle { color: var(--text-muted); font-size: 0.9rem; }
+
+    .card { background: var(--card); border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+    
+    .progress-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; font-size: 0.85rem; color: var(--text-muted); }
+    .dots { display: flex; gap: 6px; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; background: #475569; }
+    .dot.active { background: var(--accent); transform: scale(1.2); }
+    .dot.done { background: var(--success); }
+
+    .english-prompt { font-size: 1.25rem; font-weight: 600; color: #f1f5f9; margin-bottom: 20px; min-height: 50px; display: flex; align-items: center; }
+
+    /* Sentence Build Area */
+    .sentence-zone { min-height: 90px; border: 2px dashed #475569; border-radius: 10px; padding: 12px; display: flex; flex-wrap: wrap; gap: 8px; align-content: flex-start; margin-bottom: 20px; transition: border-color 0.2s; }
+    .sentence-zone.wrong { border-color: var(--error); animation: shake 0.3s; }
+    
+    /* Clause Checkpoint Container */
+    .clause-group { display: flex; gap: 6px; padding: 4px 8px; border-radius: 8px; background: rgba(255,255,255,0.03); }
+    .clause-group.completed { background: rgba(16, 185, 129, 0.15); border: 1px solid var(--success); }
+
+    /* Word Tiles */
+    .tile { background: var(--tile-bg); color: var(--text); border: none; padding: 10px 16px; font-size: 1.2rem; border-radius: 8px; cursor: pointer; user-select: none; transition: all 0.15s ease; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+    .tile:hover:not(:disabled) { background: var(--tile-hover); transform: translateY(-2px); }
+    .tile:disabled { opacity: 0.2; cursor: default; transform: none; }
+    .tile.locked { background: #064e3b; color: #a7f3d0; cursor: default; }
+
+    /* Word Bank */
+    .word-bank { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; min-height: 100px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 10px; }
+
+    /* Controls */
+    .controls { display: flex; justify-content: space-between; margin-top: 10px; }
+    .btn { background: var(--tile-bg); color: var(--text); border: none; padding: 10px 18px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+    .btn:hover { background: var(--tile-hover); }
+    .btn-primary { background: var(--accent); }
+    .btn-primary:hover { background: var(--accent-hover); }
+
+    /* JSON Modal / Drawer */
+    textarea { width: 100%; height: 120px; background: #0f172a; color: #a5f3fc; border: 1px solid #334155; border-radius: 8px; padding: 10px; font-family: monospace; font-size: 0.85rem; margin-top: 10px; resize: vertical; }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-6px); }
+      40%, 80% { transform: translateX(6px); }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>Chinese Clause Builder</h1>
+    <p class="subtitle">Mistakes reset only the current clause checkpoint!</p>
+  </header>
+
+  <div class="card">
+    <div class="progress-bar">
+      <span id="sentence-counter">Sentence 1 of 10</span>
+      <div class="dots" id="dots-container"></div>
+    </div>
+
+    <div class="english-prompt" id="english-text">Loading...</div>
+
+    <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 6px;">Tap words in correct order:</p>
+    <div class="sentence-zone" id="sentence-zone"></div>
+
+    <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 6px;">Word Bank:</p>
+    <div class="word-bank" id="word-bank"></div>
+
+    <div class="controls">
+      <button class="btn" id="json-toggle">📥 Load New JSON</button>
+      <button class="btn btn-primary" id="next-btn" style="display: none;">Next Sentence ➔</button>
+    </div>
+  </div>
+
+  <div class="card" id="json-card" style="display: none;">
+    <h3>Paste AI JSON Output Here:</h3>
+    <textarea id="json-input" placeholder='Paste JSON generated by Gemini/ChatGPT here...'></textarea>
+    <button class="btn btn-primary" id="load-json-btn" style="margin-top: 10px;">Load Sentences</button>
+  </div>
+</div>
+
+<script>
+  // Default fallback dataset
+  const defaultData = [
+    {
+      english: "I want to drink hot tea today because I have a cold.",
+      clauses: [["我", "今天"], ["想", "喝", "热茶"], ["因为", "我", "感冒了"]]
+    },
+    {
+      english: "Although the Chinese grammar is difficult, it is very interesting.",
+      clauses: [["虽然", "中文", "语法"], ["有点", "难"], ["但是", "很有趣"]]
+    }
+  ];
+
+  let sentences = defaultData;
+  let currentIdx = 0;
+  
+  // Game state for current sentence
+  let currentClauseIdx = 0;
+  let currentWordInClauseIdx = 0;
+  let wordBank = []; // Array of { id, text, originalClauseIdx, originalWordIdx }
+  let completedClauses = []; // Array of completed word arrays
+
+  // DOM Elements
+  const englishEl = document.getElementById('english-text');
+  const sentenceZone = document.getElementById('sentence-zone');
+  const wordBankEl = document.getElementById('word-bank');
+  const counterEl = document.getElementById('sentence-counter');
+  const dotsEl = document.getElementById('dots-container');
+  const nextBtn = document.getElementById('next-btn');
+  const jsonToggle = document.getElementById('json-toggle');
+  const jsonCard = document.getElementById('json-card');
+  const jsonInput = document.getElementById('json-input');
+  const loadJsonBtn = document.getElementById('load-json-btn');
+
+  function initGame() {
+    renderDots();
+    loadSentence(currentIdx);
+  }
+
+  function renderDots() {
+    dotsEl.innerHTML = '';
+    sentences.forEach((_, idx) => {
+      const dot = document.createElement('div');
+      dot.className = `dot ${idx === currentIdx ? 'active' : ''} ${idx < currentIdx ? 'done' : ''}`;
+      dotsEl.appendChild(dot);
+    });
+  }
+
+  function loadSentence(index) {
+    nextBtn.style.display = 'none';
+    currentClauseIdx = 0;
+    currentWordInClauseIdx = 0;
+    completedClauses = [];
+    
+    const item = sentences[index];
+    counterEl.innerText = `Sentence ${index + 1} of ${sentences.length}`;
+    englishEl.innerText = item.english;
+
+    // Prepare Word Bank
+    let tiles = [];
+    item.clauses.forEach((clause, cIdx) => {
+      clause.forEach((word, wIdx) => {
+        tiles.push({
+          id: `${cIdx}-${wIdx}-${Math.random().toString(36).substr(2, 5)}`,
+          text: word,
+          cIdx: cIdx,
+          wIdx: wIdx
+        });
+      });
+    });
+
+    // Shuffle tiles
+    wordBank = tiles.sort(() => Math.random() - 0.5);
+
+    renderBoard();
+  }
+
+  function renderBoard() {
+    const currentSentence = sentences[currentIdx];
+    sentenceZone.innerHTML = '';
+
+    // 1. Render Completed Clauses (Checkpoints)
+    completedClauses.forEach((clauseWords) => {
+      const group = document.createElement('div');
+      group.className = 'clause-group completed';
+      clauseWords.forEach(word => {
+        const tile = document.createElement('div');
+        tile.className = 'tile locked';
+        tile.innerText = word;
+        group.appendChild(tile);
+      });
+      sentenceZone.appendChild(group);
+    });
+
+    // 2. Render Currently Picked Words for Active Clause
+    if (currentClauseIdx < currentSentence.clauses.length) {
+      const activeGroup = document.createElement('div');
+      activeGroup.className = 'clause-group';
+      
+      const currentTargetClause = currentSentence.clauses[currentClauseIdx];
+      for (let i = 0; i < currentWordInClauseIdx; i++) {
+        const tile = document.createElement('div');
+        tile.className = 'tile';
+        tile.innerText = currentTargetClause[i];
+        activeGroup.appendChild(tile);
+      }
+      
+      if (currentWordInClauseIdx > 0) {
+        sentenceZone.appendChild(activeGroup);
+      }
+    }
+
+    // 3. Render Word Bank
+    wordBankEl.innerHTML = '';
+    wordBank.forEach(item => {
+      const btn = document.createElement('button');
+      btn.className = 'tile';
+      btn.innerText = item.text;
+      
+      // Check if tile is already placed in completed clauses or active clause draft
+      const isUsed = isTileUsed(item);
+      btn.disabled = isUsed;
+
+      btn.onclick = () => handleTileClick(item);
+      wordBankEl.appendChild(btn);
+    });
+
+    renderDots();
+  }
+
+  function isTileUsed(item) {
+    // Is it in a completed clause?
+    if (item.cIdx < currentClauseIdx) return true;
+    // Is it placed in current working clause?
+    if (item.cIdx === currentClauseIdx && item.wIdx < currentWordInClauseIdx) return true;
+    return false;
+  }
+
+  function handleTileClick(item) {
+    const currentSentence = sentences[currentIdx];
+    const expectedWord = currentSentence.clauses[currentClauseIdx][currentWordInClauseIdx];
+
+    if (item.text === expectedWord && item.cIdx === currentClauseIdx && item.wIdx === currentWordInClauseIdx) {
+      // CORRECT CHOICE
+      currentWordInClauseIdx++;
+
+      // Check if Clause is Completed
+      if (currentWordInClauseIdx >= currentSentence.clauses[currentClauseIdx].length) {
+        completedClauses.push(currentSentence.clauses[currentClauseIdx]);
+        currentClauseIdx++;
+        currentWordInClauseIdx = 0;
+      }
+
+      // Check if Sentence is Completed
+      if (currentClauseIdx >= currentSentence.clauses.length) {
+        sentenceZone.classList.add('completed');
+        nextBtn.style.display = 'inline-block';
+      }
+
+      renderBoard();
+    } else {
+      // WRONG CHOICE - TRIGGER CLAUSE RESET
+      sentenceZone.classList.add('wrong');
+      setTimeout(() => sentenceZone.classList.remove('wrong'), 400);
+
+      // RESET TO START OF CURRENT CLAUSE
+      currentWordInClauseIdx = 0;
+      renderBoard();
+    }
+  }
+
+  // Next Sentence Button
+  nextBtn.onclick = () => {
+    if (currentIdx < sentences.length - 1) {
+      currentIdx++;
+      loadSentence(currentIdx);
+    } else {
+      alert('🎉 Great job! You finished all sentences in this set!');
+    }
+  };
+
+  // Toggle JSON Modal
+  jsonToggle.onclick = () => {
+    jsonCard.style.display = jsonCard.style.display === 'none' ? 'block' : 'none';
+  };
+
+  // Load Custom JSON
+  loadJsonBtn.onclick = () => {
+    try {
+      const parsed = JSON.parse(jsonInput.value.trim());
+      if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].clauses) {
+        sentences = parsed;
+        currentIdx = 0;
+        jsonCard.style.display = 'none';
+        initGame();
+      } else {
+        alert('Invalid JSON format. Make sure it follows the specified schema.');
+      }
+    } catch (e) {
+      alert('Error parsing JSON. Please check for syntax errors.');
+    }
+  };
+
+  // Start App
+  initGame();
+</script>
+
+</body>
+</html>
