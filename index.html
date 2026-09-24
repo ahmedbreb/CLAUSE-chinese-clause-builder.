@@ -45,6 +45,9 @@
     .clause-group { display: flex; gap: 6px; padding: 6px 8px; border-radius: 8px; background: rgba(255,255,255,0.03); flex-wrap: wrap; }
     .clause-group.completed { background: rgba(16, 185, 129, 0.15); border: 1px solid var(--success); }
 
+    /* Word Bank Header */
+    .word-bank-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+
     /* Word Tiles with Pinyin */
     .tile { 
       background: var(--tile-bg); 
@@ -84,10 +87,10 @@
     .word-bank { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; min-height: 100px; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 10px; }
 
     /* Controls */
-    .controls { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
-    .btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
+    .controls { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 20px; }
     .btn { background: var(--tile-bg); color: var(--text); border: none; padding: 10px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s; font-size: 0.9rem; }
     .btn:hover { background: var(--tile-hover); }
+    .btn-sm { padding: 6px 12px; font-size: 0.8rem; }
     .btn-primary { background: var(--accent); }
     .btn-primary:hover { background: var(--accent-hover); }
 
@@ -119,14 +122,16 @@
     <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 6px;">Tap words in correct order:</p>
     <div class="sentence-zone" id="sentence-zone"></div>
 
-    <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 6px;">Word Bank:</p>
+    <!-- Word Bank Header with Reset Clause Button -->
+    <div class="word-bank-header">
+      <span style="font-size: 0.8rem; color: var(--text-muted);">Word Bank:</span>
+      <button class="btn btn-sm" id="reset-clause-btn">🔄 Reset Clause</button>
+    </div>
+    
     <div class="word-bank" id="word-bank"></div>
 
     <div class="controls">
-      <div class="btn-group">
-        <button class="btn" id="reset-clause-btn">🔄 Reset Clause</button>
-        <button class="btn" id="json-toggle">📥 Load New JSON</button>
-      </div>
+      <button class="btn" id="json-toggle">📥 Load New JSON</button>
       <button class="btn btn-primary" id="next-btn" style="display: none;">Next Sentence ➔</button>
     </div>
   </div>
