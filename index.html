@@ -55,7 +55,17 @@
     .clause-group.completed { background: rgba(16, 185, 129, 0.15); border: 1px solid var(--success); }
 
     /* Word Bank Header */
-    .word-bank-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .word-bank-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+    
+    /* Tiny Active Clause Hint right above word bank */
+    .active-clause-hint {
+      font-size: 0.72rem;
+      color: #93c5fd;
+      margin-bottom: 8px;
+      font-style: italic;
+      letter-spacing: 0.02em;
+      opacity: 0.9;
+    }
 
     /* Word Tiles with Pinyin */
     .tile { 
@@ -98,7 +108,7 @@
       background: #334155;
     }
 
-    /* Selected / Used state - makes tile almost invisible in the word bank */
+    /* Selected / Used state - makes tile faded out in the word bank */
     .tile:disabled, .tile[disabled] { 
       opacity: 0.15 !important; 
       cursor: default !important; 
@@ -156,10 +166,12 @@
     <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 6px;">Tap words in correct order:</p>
     <div class="sentence-zone" id="sentence-zone"></div>
 
+    <!-- Word Bank Header with Tiny Active Clause Hint -->
     <div class="word-bank-header">
       <span style="font-size: 0.8rem; color: var(--text-muted);">Word Bank:</span>
       <button class="btn btn-sm" id="reset-clause-btn">🔄 Reset Clause</button>
     </div>
+    <div id="active-clause-hint" class="active-clause-hint"></div>
     
     <div class="word-bank" id="word-bank"></div>
 
@@ -222,6 +234,7 @@
   const englishEl = document.getElementById('english-text');
   const clauseTracker = document.getElementById('clause-tracker');
   const clauseTrackerList = document.getElementById('clause-tracker-list');
+  const activeClauseHint = document.getElementById('active-clause-hint');
   const sentenceZone = document.getElementById('sentence-zone');
   const wordBankEl = document.getElementById('word-bank');
   const counterEl = document.getElementById('sentence-counter');
@@ -362,6 +375,15 @@
 
     if (currentSentence.clauses && currentSentence.clauses.length > 1) {
       renderClauseTracker(currentSentence);
+    }
+
+    // Update the tiny active English clause hint right above the word bank
+    if (currentSentence.clauses && currentSentence.clauses[currentClauseIdx]) {
+      const activeClauseObj = currentSentence.clauses[currentClauseIdx];
+      activeClauseHint.innerText = `🎯 Target Clause: "${activeClauseObj.english}"`;
+      activeClauseHint.style.display = 'block';
+    } else {
+      activeClauseHint.style.display = 'none';
     }
 
     // 1. Render Completed Clause Checkpoints
