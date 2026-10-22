@@ -88,19 +88,27 @@
     }
 
     .tile:hover:not(:disabled) { background: var(--tile-hover); transform: translateY(-2px); }
-    .tile:disabled { opacity: 0.15; cursor: default; transform: none; box-shadow: none; border-color: transparent !important; }
     
-    /* Highlight for tiles in active clause */
+    /* Subtle highlight for active clause word bank tiles */
     .tile.active-clause-tile:not(:disabled) {
-      background: #1e3a8a;
-      border-color: #3b82f6;
-      box-shadow: 0 0 10px rgba(59, 130, 246, 0.35);
+      background: #1e293b;
+      border: 1px solid rgba(96, 165, 250, 0.4);
     }
     .tile.active-clause-tile:hover:not(:disabled) {
-      background: #2563eb;
+      background: #334155;
     }
 
-    .tile.locked { background: #064e3b; color: #a7f3d0; cursor: default; border-color: transparent; }
+    /* Selected / Used state - makes tile almost invisible in the word bank */
+    .tile:disabled, .tile[disabled] { 
+      opacity: 0.15 !important; 
+      cursor: default !important; 
+      transform: none !important; 
+      box-shadow: none !important; 
+      border-color: transparent !important;
+      background: var(--tile-bg) !important;
+    }
+
+    .tile.locked { background: #064e3b !important; color: #a7f3d0 !important; cursor: default; border-color: transparent !important; opacity: 1 !important; }
     .tile.locked .pinyin-text { color: #6ee7b7; }
 
     /* Word Bank */
@@ -376,13 +384,13 @@
       sentenceZone.appendChild(activeGroup);
     }
 
-    // 3. Render Word Bank with Active Clause Highlights
+    // 3. Render Word Bank with Subtle Active Clause Highlights
     wordBankEl.innerHTML = '';
     wordBank.forEach(tileObj => {
       const btn = createTileElement(tileObj, false);
       btn.tagName = 'BUTTON';
       
-      // Highlight tiles belonging to current clause (for multi-clause sentences)
+      // Subtle highlight for tiles in current active clause
       if (currentSentence.clauses.length > 1 && tileObj.clauseIdx === currentClauseIdx) {
         btn.classList.add('active-clause-tile');
       }
