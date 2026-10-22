@@ -10,7 +10,7 @@
       --card: #1e293b;
       --accent: #3b82f6;
       --accent-hover: #2563eb;
-      --pinyin-color: #93c5fd;
+      --pinyin-color: #64748b; /* Fainter muted pinyin color */
       --success: #10b981;
       --error: #ef4444;
       --text: #f8fafc;
@@ -67,7 +67,7 @@
       opacity: 0.9;
     }
 
-    /* Word Tiles with Pinyin */
+    /* Word Tiles with Faint Pinyin */
     .tile { 
       background: var(--tile-bg); 
       color: var(--text); 
@@ -84,17 +84,28 @@
       justify-content: center;
       min-width: 48px;
     }
+    
+    /* Faint Pinyin Style */
     .tile .pinyin-text {
-      font-size: 0.75rem;
+      font-size: 0.72rem;
       color: var(--pinyin-color);
-      font-weight: 500;
+      font-weight: 400;
       line-height: 1.1;
       margin-bottom: 2px;
+      opacity: 0.35; /* Very faint default view */
+      transition: opacity 0.15s ease, color 0.15s ease;
     }
+
     .tile .char-text {
       font-size: 1.25rem;
       font-weight: 600;
       line-height: 1.1;
+    }
+
+    /* Hovering over tile brightens pinyin slightly for checking */
+    .tile:hover:not(:disabled) .pinyin-text {
+      opacity: 0.85;
+      color: #93c5fd;
     }
 
     .tile:hover:not(:disabled) { background: var(--tile-hover); transform: translateY(-2px); }
@@ -119,7 +130,7 @@
     }
 
     .tile.locked { background: #064e3b !important; color: #a7f3d0 !important; cursor: default; border-color: transparent !important; opacity: 1 !important; }
-    .tile.locked .pinyin-text { color: #6ee7b7; }
+    .tile.locked .pinyin-text { color: #6ee7b7; opacity: 0.75; }
 
     /* Word Bank */
     .word-bank { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; min-height: 100px; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 10px; }
@@ -377,7 +388,6 @@
       renderClauseTracker(currentSentence);
     }
 
-    // Update the tiny active English clause hint right above the word bank
     if (currentSentence.clauses && currentSentence.clauses[currentClauseIdx]) {
       const activeClauseObj = currentSentence.clauses[currentClauseIdx];
       activeClauseHint.innerText = `🎯 Target Clause: "${activeClauseObj.english}"`;
@@ -412,7 +422,6 @@
       const btn = createTileElement(tileObj, false);
       btn.tagName = 'BUTTON';
       
-      // Subtle highlight for tiles in current active clause
       if (currentSentence.clauses.length > 1 && tileObj.clauseIdx === currentClauseIdx) {
         btn.classList.add('active-clause-tile');
       }
