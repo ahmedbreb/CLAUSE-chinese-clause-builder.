@@ -61,7 +61,7 @@
     .tile { 
       background: var(--tile-bg); 
       color: var(--text); 
-      border: none; 
+      border: 1px solid transparent; 
       padding: 6px 14px; 
       border-radius: 8px; 
       cursor: pointer; 
@@ -88,8 +88,19 @@
     }
 
     .tile:hover:not(:disabled) { background: var(--tile-hover); transform: translateY(-2px); }
-    .tile:disabled { opacity: 0.2; cursor: default; transform: none; }
-    .tile.locked { background: #064e3b; color: #a7f3d0; cursor: default; }
+    .tile:disabled { opacity: 0.15; cursor: default; transform: none; box-shadow: none; border-color: transparent !important; }
+    
+    /* Highlight for tiles in active clause */
+    .tile.active-clause-tile:not(:disabled) {
+      background: #1e3a8a;
+      border-color: #3b82f6;
+      box-shadow: 0 0 10px rgba(59, 130, 246, 0.35);
+    }
+    .tile.active-clause-tile:hover:not(:disabled) {
+      background: #2563eb;
+    }
+
+    .tile.locked { background: #064e3b; color: #a7f3d0; cursor: default; border-color: transparent; }
     .tile.locked .pinyin-text { color: #6ee7b7; }
 
     /* Word Bank */
@@ -128,7 +139,7 @@
 
     <div class="english-prompt" id="english-text">Loading...</div>
 
-    <!-- Visual Clause Correspondence Tracker (Hidden for single-clause sentences) -->
+    <!-- Visual Clause Correspondence Tracker -->
     <div class="clause-tracker" id="clause-tracker" style="display: none;">
       <div class="clause-tracker-title">Clause Breakdown & Target:</div>
       <div id="clause-tracker-list"></div>
@@ -215,13 +226,11 @@
   const loadJsonBtn = document.getElementById('load-json-btn');
   const clearJsonBtn = document.getElementById('clear-json-btn');
 
-  // Robust normalizer for both old and new JSON formats
   function normalizeData(raw) {
     return raw.map(s => {
       let clausesNormalized = [];
       if (Array.isArray(s.clauses)) {
         clausesNormalized = s.clauses.map((c, cIdx) => {
-          // If clause is an object { english, chinese }
           if (c && !Array.isArray(c) && c.chinese) {
             return {
               english: c.english || `Clause ${cIdx + 1}`,
@@ -231,7 +240,6 @@
               }))
             };
           }
-          // If clause is a raw array of words (old format)
           if (Array.isArray(c)) {
             return {
               english: `Clause ${cIdx + 1}`,
@@ -278,7 +286,6 @@
     counterEl.innerText = `Sentence ${index + 1} of ${sentences.length}`;
     englishEl.innerText = item.english;
 
-    // Handle Visual Clause Tracker visibility
     if (item.clauses && item.clauses.length > 1) {
       clauseTracker.style.display = 'flex';
       renderClauseTracker(item);
@@ -286,14 +293,14 @@
       clauseTracker.style.display = 'none';
     }
 
-    // Create unique tile objects
     let tiles = [];
     item.clauses.forEach((clauseObj, cIdx) => {
       clauseObj.chinese.forEach((wordObj, wIdx) => {
         tiles.push({
           id: `tile-${cIdx}-${wIdx}-${Math.random().toString(36).substr(2, 6)}`,
           word: wordObj.word,
-          pinyin: wordObj.pinyin
+          pinyin: wordObj.pinyin,
+          clauseIdx: cIdx
         });
       });
     });
@@ -345,7 +352,6 @@
     const currentSentence = sentences[currentIdx];
     sentenceZone.innerHTML = '';
 
-    // Update tracker if multi-clause
     if (currentSentence.clauses && currentSentence.clauses.length > 1) {
       renderClauseTracker(currentSentence);
     }
@@ -360,7 +366,7 @@
       sentenceZone.appendChild(group);
     });
 
-    // 2. Render Active Clause Progress (with subtle active highlight)
+    // 2. Render Active Clause Progress
     if (activeClauseTiles.length > 0 || currentClauseIdx < currentSentence.clauses.length) {
       const activeGroup = document.createElement('div');
       activeGroup.className = 'clause-group active-draft';
@@ -370,17 +376,20 @@
       sentenceZone.appendChild(activeGroup);
     }
 
-    // 3. Render Word Bank
+    // 3. Render Word Bank with Active Clause Highlights
     wordBankEl.innerHTML = '';
     wordBank.forEach(tileObj => {
       const btn = createTileElement(tileObj, false);
       btn.tagName = 'BUTTON';
       
+      // Highlight tiles belonging to current clause (for multi-clause sentences)
+      if (currentSentence.clauses.length > 1 && tileObj.clauseIdx === currentClauseIdx) {
+        btn.classList.add('active-clause-tile');
+      }
+
       const isUsed = usedTileIds.has(tileObj.id);
       if (isUsed) {
         btn.setAttribute('disabled', 'true');
-        btn.style.opacity = '0.15';
-        btn.style.cursor = 'default';
       } else {
         btn.onclick = () => handleTileClick(tileObj);
       }
@@ -415,7 +424,6 @@
 
       renderBoard();
     } else {
-      // Wrong tile -> reset current active clause attempt
       sentenceZone.classList.add('wrong');
       setTimeout(() => sentenceZone.classList.remove('wrong'), 400);
 
