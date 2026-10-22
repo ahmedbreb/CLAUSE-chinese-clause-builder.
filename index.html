@@ -10,7 +10,7 @@
       --card: #1e293b;
       --accent: #3b82f6;
       --accent-hover: #2563eb;
-      --pinyin-color: #94a3b8; /* Slightly brighter slate tone */
+      --pinyin-color: #94a3b8;
       --success: #10b981;
       --error: #ef4444;
       --text: #f8fafc;
@@ -38,15 +38,29 @@
     .english-prompt { font-size: 1.15rem; font-weight: 600; color: #f1f5f9; margin-bottom: 12px; }
 
     /* English Clause Correspondence Tracker */
-    .clause-tracker { display: flex; flex-direction: column; gap: 6px; margin-bottom: 20px; padding: 10px; background: rgba(15, 23, 42, 0.4); border-radius: 8px; border: 1px solid #334155; }
+    .clause-tracker { display: flex; flex-direction: column; gap: 6px; margin-bottom: 20px; padding: 10px; background: rgba(15, 23, 42, 0.4); border-radius: 8px; border: 1px solid #334155; max-height: 150px; overflow-y: auto; }
     .clause-tracker-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 2px; }
     .english-clause-item { padding: 8px 12px; border-radius: 6px; font-size: 0.95rem; color: var(--text-muted); background: rgba(255,255,255,0.02); transition: all 0.2s; border-left: 3px solid transparent; }
     .english-clause-item.upcoming { color: #cbd5e1; border-left-color: #475569; background: rgba(255,255,255,0.04); }
     .english-clause-item.active { color: #ffffff; background: rgba(59, 130, 246, 0.15); border-left-color: var(--accent); font-weight: 600; box-shadow: 0 2px 8px rgba(59,130,246,0.1); }
     .english-clause-item.completed { color: #a7f3d0; background: rgba(16, 185, 129, 0.1); border-left-color: var(--success); opacity: 0.8; }
 
-    /* Sentence Build Area */
-    .sentence-zone { min-height: 100px; border: 2px dashed #475569; border-radius: 10px; padding: 12px; display: flex; flex-wrap: wrap; gap: 8px; align-content: flex-start; margin-bottom: 20px; transition: border-color 0.2s; }
+    /* Sentence Build Area - Fixed height with internal scroll to keep word bank locked in place */
+    .sentence-zone { 
+      height: 130px; 
+      min-height: 130px; 
+      max-height: 130px; 
+      overflow-y: auto; 
+      border: 2px dashed #475569; 
+      border-radius: 10px; 
+      padding: 12px; 
+      display: flex; 
+      flex-wrap: wrap; 
+      gap: 8px; 
+      align-content: flex-start; 
+      margin-bottom: 20px; 
+      transition: border-color 0.2s; 
+    }
     .sentence-zone.wrong { border-color: var(--error); animation: shake 0.3s; }
     
     /* Clause Checkpoint Container */
@@ -85,7 +99,6 @@
       min-width: 48px;
     }
     
-    /* Adjusted Pinyin Style - Slightly more visible (0.50 opacity) */
     .tile .pinyin-text {
       font-size: 0.72rem;
       color: var(--pinyin-color);
@@ -102,7 +115,6 @@
       line-height: 1.1;
     }
 
-    /* Hovering over tile brightens pinyin further */
     .tile:hover:not(:disabled) .pinyin-text {
       opacity: 0.90;
       color: #93c5fd;
@@ -110,7 +122,6 @@
 
     .tile:hover:not(:disabled) { background: var(--tile-hover); transform: translateY(-2px); }
     
-    /* Subtle highlight for active clause word bank tiles */
     .tile.active-clause-tile:not(:disabled) {
       background: #1e293b;
       border: 1px solid rgba(96, 165, 250, 0.4);
@@ -119,7 +130,6 @@
       background: #334155;
     }
 
-    /* Selected / Used state - makes tile faded out in the word bank */
     .tile:disabled, .tile[disabled] { 
       opacity: 0.15 !important; 
       cursor: default !important; 
