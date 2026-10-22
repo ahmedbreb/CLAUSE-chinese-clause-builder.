@@ -10,7 +10,7 @@
       --card: #1e293b;
       --accent: #3b82f6;
       --accent-hover: #2563eb;
-      --pinyin-color: #64748b; /* Fainter muted pinyin color */
+      --pinyin-color: #94a3b8; /* Slightly brighter slate tone */
       --success: #10b981;
       --error: #ef4444;
       --text: #f8fafc;
@@ -67,7 +67,7 @@
       opacity: 0.9;
     }
 
-    /* Word Tiles with Faint Pinyin */
+    /* Word Tiles with Subtle Pinyin */
     .tile { 
       background: var(--tile-bg); 
       color: var(--text); 
@@ -85,14 +85,14 @@
       min-width: 48px;
     }
     
-    /* Faint Pinyin Style */
+    /* Adjusted Pinyin Style - Slightly more visible (0.50 opacity) */
     .tile .pinyin-text {
       font-size: 0.72rem;
       color: var(--pinyin-color);
-      font-weight: 400;
+      font-weight: 500;
       line-height: 1.1;
       margin-bottom: 2px;
-      opacity: 0.35; /* Very faint default view */
+      opacity: 0.50; 
       transition: opacity 0.15s ease, color 0.15s ease;
     }
 
@@ -102,9 +102,9 @@
       line-height: 1.1;
     }
 
-    /* Hovering over tile brightens pinyin slightly for checking */
+    /* Hovering over tile brightens pinyin further */
     .tile:hover:not(:disabled) .pinyin-text {
-      opacity: 0.85;
+      opacity: 0.90;
       color: #93c5fd;
     }
 
@@ -130,7 +130,7 @@
     }
 
     .tile.locked { background: #064e3b !important; color: #a7f3d0 !important; cursor: default; border-color: transparent !important; opacity: 1 !important; }
-    .tile.locked .pinyin-text { color: #6ee7b7; opacity: 0.75; }
+    .tile.locked .pinyin-text { color: #6ee7b7; opacity: 0.85; }
 
     /* Word Bank */
     .word-bank { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; min-height: 100px; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 10px; }
