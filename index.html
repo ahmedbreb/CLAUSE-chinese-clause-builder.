@@ -35,14 +35,23 @@
     .dot.active { background: var(--accent); transform: scale(1.2); }
     .dot.done { background: var(--success); }
 
-    .english-prompt { font-size: 1.25rem; font-weight: 600; color: #f1f5f9; margin-bottom: 20px; min-height: 50px; display: flex; align-items: center; }
+    .english-prompt { font-size: 1.15rem; font-weight: 600; color: #f1f5f9; margin-bottom: 12px; }
+
+    /* English Clause Correspondence Tracker */
+    .clause-tracker { display: flex; flex-direction: column; gap: 6px; margin-bottom: 20px; padding: 10px; background: rgba(15, 23, 42, 0.4); border-radius: 8px; border: 1px solid #334155; }
+    .clause-tracker-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 2px; }
+    .english-clause-item { padding: 8px 12px; border-radius: 6px; font-size: 0.95rem; color: var(--text-muted); background: rgba(255,255,255,0.02); transition: all 0.2s; border-left: 3px solid transparent; }
+    .english-clause-item.upcoming { color: #cbd5e1; border-left-color: #475569; background: rgba(255,255,255,0.04); }
+    .english-clause-item.active { color: #ffffff; background: rgba(59, 130, 246, 0.15); border-left-color: var(--accent); font-weight: 600; box-shadow: 0 2px 8px rgba(59,130,246,0.1); }
+    .english-clause-item.completed { color: #a7f3d0; background: rgba(16, 185, 129, 0.1); border-left-color: var(--success); opacity: 0.8; }
 
     /* Sentence Build Area */
     .sentence-zone { min-height: 100px; border: 2px dashed #475569; border-radius: 10px; padding: 12px; display: flex; flex-wrap: wrap; gap: 8px; align-content: flex-start; margin-bottom: 20px; transition: border-color 0.2s; }
     .sentence-zone.wrong { border-color: var(--error); animation: shake 0.3s; }
     
     /* Clause Checkpoint Container */
-    .clause-group { display: flex; gap: 6px; padding: 6px 8px; border-radius: 8px; background: rgba(255,255,255,0.03); flex-wrap: wrap; }
+    .clause-group { display: flex; gap: 6px; padding: 6px 8px; border-radius: 8px; background: rgba(255,255,255,0.03); flex-wrap: wrap; border: 1px solid transparent; }
+    .clause-group.active-draft { border-color: rgba(59, 130, 246, 0.4); background: rgba(59, 130, 246, 0.05); }
     .clause-group.completed { background: rgba(16, 185, 129, 0.15); border: 1px solid var(--success); }
 
     /* Word Bank Header */
@@ -119,10 +128,15 @@
 
     <div class="english-prompt" id="english-text">Loading...</div>
 
+    <!-- Visual Clause Correspondence Tracker (Hidden for single-clause sentences) -->
+    <div class="clause-tracker" id="clause-tracker" style="display: none;">
+      <div class="clause-tracker-title">Clause Breakdown & Target:</div>
+      <div id="clause-tracker-list"></div>
+    </div>
+
     <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 6px;">Tap words in correct order:</p>
     <div class="sentence-zone" id="sentence-zone"></div>
 
-    <!-- Word Bank Header with Reset Clause Button -->
     <div class="word-bank-header">
       <span style="font-size: 0.8rem; color: var(--text-muted);">Word Bank:</span>
       <button class="btn btn-sm" id="reset-clause-btn">🔄 Reset Clause</button>
@@ -147,22 +161,31 @@
 </div>
 
 <script>
-  // Default dataset with Pinyin built-in
   const rawDefaultData = [
     {
       english: "I want to drink hot tea today because I have a cold.",
       clauses: [
-        [ {word: "我", pinyin: "wǒ"}, {word: "今天", pinyin: "jīntiān"} ],
-        [ {word: "想", pinyin: "xiǎng"}, {word: "喝", pinyin: "hē"}, {word: "热茶", pinyin: "rèchá"} ],
-        [ {word: "因为", pinyin: "yīnwèi"}, {word: "我", pinyin: "wǒ"}, {word: "感冒了", pinyin: "gǎnmào le"} ]
+        {
+          english: "I want to drink hot tea today",
+          chinese: [ {word: "我", pinyin: "wǒ"}, {word: "今天", pinyin: "jīntiān"}, {word: "想", pinyin: "xiǎng"}, {word: "喝", pinyin: "hē"}, {word: "热茶", pinyin: "rèchá"} ]
+        },
+        {
+          english: "because I have a cold.",
+          chinese: [ {word: "因为", pinyin: "yīnwèi"}, {word: "我", pinyin: "wǒ"}, {word: "感冒了", pinyin: "gǎnmào le"} ]
+        }
       ]
     },
     {
       english: "Although Chinese grammar is difficult, it is very interesting.",
       clauses: [
-        [ {word: "虽然", pinyin: "suīrán"}, {word: "中文", pinyin: "zhōngwén"}, {word: "语法", pinyin: "yǔfǎ"} ],
-        [ {word: "有点", pinyin: "yǒudiǎn"}, {word: "难", pinyin: "nán"} ],
-        [ {word: "但是", pinyin: "dànshì"}, {word: "很有趣", pinyin: "hěn yǒuqù"} ]
+        {
+          english: "Although Chinese grammar is difficult,",
+          chinese: [ {word: "虽然", pinyin: "suīrán"}, {word: "中文", pinyin: "zhōngwén"}, {word: "语法", pinyin: "yǔfǎ"}, {word: "有点", pinyin: "yǒudiǎn"}, {word: "难", pinyin: "nán"} ]
+        },
+        {
+          english: "it is very interesting.",
+          chinese: [ {word: "但是", pinyin: "dànshì"}, {word: "很有趣", pinyin: "hěn yǒuqù"} ]
+        }
       ]
     }
   ];
@@ -170,16 +193,16 @@
   let sentences = [];
   let currentIdx = 0;
   
-  // Game State
   let currentClauseIdx = 0;
   let currentWordInClauseIdx = 0;
-  let wordBank = [];            // Array of unique tile objects
-  let usedTileIds = new Set();  // Set of tile IDs that are used/placed
-  let activeClauseTiles = [];   // Array of tile objects placed in current clause
-  let completedClauseGroups = []; // Array of arrays containing tile objects
+  let wordBank = [];
+  let usedTileIds = new Set();
+  let activeClauseTiles = [];
+  let completedClauseGroups = [];
 
-  // Elements
   const englishEl = document.getElementById('english-text');
+  const clauseTracker = document.getElementById('clause-tracker');
+  const clauseTrackerList = document.getElementById('clause-tracker-list');
   const sentenceZone = document.getElementById('sentence-zone');
   const wordBankEl = document.getElementById('word-bank');
   const counterEl = document.getElementById('sentence-counter');
@@ -192,17 +215,40 @@
   const loadJsonBtn = document.getElementById('load-json-btn');
   const clearJsonBtn = document.getElementById('clear-json-btn');
 
-  // Normalize data (handles both new Pinyin objects and old plain string format)
+  // Robust normalizer for both old and new JSON formats
   function normalizeData(raw) {
-    return raw.map(s => ({
-      english: s.english,
-      clauses: s.clauses.map(clause =>
-        clause.map(item => {
-          if (typeof item === 'string') return { word: item, pinyin: '' };
-          return { word: item.word || item.char || '', pinyin: item.pinyin || '' };
-        })
-      )
-    }));
+    return raw.map(s => {
+      let clausesNormalized = [];
+      if (Array.isArray(s.clauses)) {
+        clausesNormalized = s.clauses.map((c, cIdx) => {
+          // If clause is an object { english, chinese }
+          if (c && !Array.isArray(c) && c.chinese) {
+            return {
+              english: c.english || `Clause ${cIdx + 1}`,
+              chinese: c.chinese.map(item => ({
+                word: item.word || item.char || '',
+                pinyin: item.pinyin || ''
+              }))
+            };
+          }
+          // If clause is a raw array of words (old format)
+          if (Array.isArray(c)) {
+            return {
+              english: `Clause ${cIdx + 1}`,
+              chinese: c.map(item => {
+                if (typeof item === 'string') return { word: item, pinyin: '' };
+                return { word: item.word || item.char || '', pinyin: item.pinyin || '' };
+              })
+            };
+          }
+          return { english: '', chinese: [] };
+        });
+      }
+      return {
+        english: s.english || '',
+        clauses: clausesNormalized
+      };
+    });
   }
 
   function initGame() {
@@ -232,10 +278,18 @@
     counterEl.innerText = `Sentence ${index + 1} of ${sentences.length}`;
     englishEl.innerText = item.english;
 
+    // Handle Visual Clause Tracker visibility
+    if (item.clauses && item.clauses.length > 1) {
+      clauseTracker.style.display = 'flex';
+      renderClauseTracker(item);
+    } else {
+      clauseTracker.style.display = 'none';
+    }
+
     // Create unique tile objects
     let tiles = [];
-    item.clauses.forEach((clause, cIdx) => {
-      clause.forEach((wordObj, wIdx) => {
+    item.clauses.forEach((clauseObj, cIdx) => {
+      clauseObj.chinese.forEach((wordObj, wIdx) => {
         tiles.push({
           id: `tile-${cIdx}-${wIdx}-${Math.random().toString(36).substr(2, 6)}`,
           word: wordObj.word,
@@ -244,10 +298,28 @@
       });
     });
 
-    // Shuffle word bank
     wordBank = tiles.sort(() => Math.random() - 0.5);
-
     renderBoard();
+  }
+
+  function renderClauseTracker(item) {
+    clauseTrackerList.innerHTML = '';
+    item.clauses.forEach((cObj, idx) => {
+      const div = document.createElement('div');
+      div.className = 'english-clause-item';
+      
+      if (idx < currentClauseIdx) {
+        div.className += ' completed';
+        div.innerText = `✓ ${cObj.english}`;
+      } else if (idx === currentClauseIdx) {
+        div.className += ' active';
+        div.innerText = `▶ ${cObj.english} (Current)`;
+      } else {
+        div.className += ' upcoming';
+        div.innerText = `${idx + 1}. ${cObj.english}`;
+      }
+      clauseTrackerList.appendChild(div);
+    });
   }
 
   function createTileElement(tileObj, isLocked = false) {
@@ -273,6 +345,11 @@
     const currentSentence = sentences[currentIdx];
     sentenceZone.innerHTML = '';
 
+    // Update tracker if multi-clause
+    if (currentSentence.clauses && currentSentence.clauses.length > 1) {
+      renderClauseTracker(currentSentence);
+    }
+
     // 1. Render Completed Clause Checkpoints
     completedClauseGroups.forEach((groupTiles) => {
       const group = document.createElement('div');
@@ -283,10 +360,10 @@
       sentenceZone.appendChild(group);
     });
 
-    // 2. Render Active Clause Progress
-    if (activeClauseTiles.length > 0) {
+    // 2. Render Active Clause Progress (with subtle active highlight)
+    if (activeClauseTiles.length > 0 || currentClauseIdx < currentSentence.clauses.length) {
       const activeGroup = document.createElement('div');
-      activeGroup.className = 'clause-group';
+      activeGroup.className = 'clause-group active-draft';
       activeClauseTiles.forEach(tileObj => {
         activeGroup.appendChild(createTileElement(tileObj, false));
       });
@@ -316,16 +393,15 @@
 
   function handleTileClick(tileObj) {
     const currentSentence = sentences[currentIdx];
-    const expectedWordObj = currentSentence.clauses[currentClauseIdx][currentWordInClauseIdx];
+    const expectedWordObj = currentSentence.clauses[currentClauseIdx].chinese[currentWordInClauseIdx];
 
     if (tileObj.word === expectedWordObj.word) {
-      // CORRECT TILE
       usedTileIds.add(tileObj.id);
       activeClauseTiles.push(tileObj);
       currentWordInClauseIdx++;
 
       // Clause Completed?
-      if (currentWordInClauseIdx >= currentSentence.clauses[currentClauseIdx].length) {
+      if (currentWordInClauseIdx >= currentSentence.clauses[currentClauseIdx].chinese.length) {
         completedClauseGroups.push([...activeClauseTiles]);
         activeClauseTiles = [];
         currentClauseIdx++;
@@ -339,7 +415,7 @@
 
       renderBoard();
     } else {
-      // WRONG TILE - Reset current active clause attempt
+      // Wrong tile -> reset current active clause attempt
       sentenceZone.classList.add('wrong');
       setTimeout(() => sentenceZone.classList.remove('wrong'), 400);
 
@@ -351,18 +427,14 @@
     }
   }
 
-  // RESET CLAUSE BUTTON LOGIC
   resetClauseBtn.onclick = () => {
     nextBtn.style.display = 'none';
 
-    // 1. If user is currently typing in an uncompleted active clause draft, clear it first
     if (activeClauseTiles.length > 0) {
       activeClauseTiles.forEach(t => usedTileIds.delete(t.id));
       activeClauseTiles = [];
       currentWordInClauseIdx = 0;
-    } 
-    // 2. If no active draft is in progress, step back and pop the last completed clause
-    else if (completedClauseGroups.length > 0) {
+    } else if (completedClauseGroups.length > 0) {
       const poppedGroup = completedClauseGroups.pop();
       poppedGroup.forEach(t => usedTileIds.delete(t.id));
       currentClauseIdx--;
@@ -373,7 +445,6 @@
     renderBoard();
   };
 
-  // Next Button
   nextBtn.onclick = () => {
     if (currentIdx < sentences.length - 1) {
       currentIdx++;
@@ -383,18 +454,15 @@
     }
   };
 
-  // Toggle JSON Modal
   jsonToggle.onclick = () => {
     jsonCard.style.display = jsonCard.style.display === 'none' ? 'block' : 'none';
   };
 
-  // Clear JSON Input Area
   clearJsonBtn.onclick = () => {
     jsonInput.value = '';
     jsonInput.focus();
   };
 
-  // Load Custom JSON
   loadJsonBtn.onclick = () => {
     try {
       const parsed = JSON.parse(jsonInput.value.trim());
@@ -412,7 +480,6 @@
     }
   };
 
-  // Start
   initGame();
 </script>
 
