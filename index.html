@@ -17,6 +17,13 @@
       --text-muted: #94a3b8;
       --tile-bg: #334155;
       --tile-hover: #475569;
+
+      /* Tone Colors */
+      --tone-1: #60a5fa; /* Blue - 1st Tone */
+      --tone-2: #34d399; /* Green - 2nd Tone */
+      --tone-3: #fbbf24; /* Orange - 3rd Tone */
+      --tone-4: #f87171; /* Red - 4th Tone */
+      --tone-0: #cbd5e1; /* Silver - Neutral / No Tone */
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
@@ -64,7 +71,7 @@
     .sentence-zone.wrong { border-color: var(--error); animation: shake 0.3s; }
     
     /* Clause Checkpoint Container */
-    .clause-group { display: flex; gap: 6px; padding: 6px 8px; border-radius: 8px; background: rgba(255,255,255,0.03); flex-wrap: wrap; border: 1px solid transparent; }
+    .clause-group { display: flex; gap: 6px; padding: 6px 8px; border-radius: 8px; background: rgba(255,255,255,0.03); flex-wrap: wrap; border: 1px solid transparent; align-items: center; }
     .clause-group.active-draft { border-color: rgba(59, 130, 246, 0.4); background: rgba(59, 130, 246, 0.05); }
     .clause-group.completed { background: rgba(16, 185, 129, 0.15); border: 1px solid var(--success); }
 
@@ -81,7 +88,7 @@
       opacity: 0.9;
     }
 
-    /* Word Tiles with Subtle Pinyin */
+    /* Word Tiles with Tone Colors */
     .tile { 
       background: var(--tile-bg); 
       color: var(--text); 
@@ -107,6 +114,11 @@
       margin-bottom: 2px;
       opacity: 0.50; 
       transition: opacity 0.15s ease, color 0.15s ease;
+    }
+
+    .tile .char-container {
+      display: inline-flex;
+      gap: 2px;
     }
 
     .tile .char-text {
@@ -139,8 +151,8 @@
       background: var(--tile-bg) !important;
     }
 
-    .tile.locked { background: #064e3b !important; color: #a7f3d0 !important; cursor: default; border-color: transparent !important; opacity: 1 !important; }
-    .tile.locked .pinyin-text { color: #6ee7b7; opacity: 0.85; }
+    .tile.locked { background: #064e3b !important; cursor: default; border-color: transparent !important; opacity: 1 !important; }
+    .tile.locked .pinyin-text { color: #6ee7b7; opacity: 0.75; }
 
     /* Word Bank */
     .word-bank { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; min-height: 100px; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 10px; }
@@ -219,11 +231,11 @@
       clauses: [
         {
           english: "I want to drink hot tea today",
-          chinese: [ {word: "我", pinyin: "wǒ"}, {word: "今天", pinyin: "jīntiān"}, {word: "想", pinyin: "xiǎng"}, {word: "喝", pinyin: "hē"}, {word: "热茶", pinyin: "rèchá"} ]
+          chinese: [ {word: "我", pinyin: "wǒ"}, {word: "今天", pinyin: "jīn tiān"}, {word: "想", pinyin: "xiǎng"}, {word: "喝", pinyin: "hē"}, {word: "热茶", pinyin: "rè chá"} ]
         },
         {
           english: "because I have a cold.",
-          chinese: [ {word: "因为", pinyin: "yīnwèi"}, {word: "我", pinyin: "wǒ"}, {word: "感冒了", pinyin: "gǎnmào le"} ]
+          chinese: [ {word: "因为", pinyin: "yīn wèi"}, {word: "我", pinyin: "wǒ"}, {word: "感冒了", pinyin: "gǎn mào le"} ]
         }
       ]
     },
@@ -232,11 +244,11 @@
       clauses: [
         {
           english: "Although Chinese grammar is difficult,",
-          chinese: [ {word: "虽然", pinyin: "suīrán"}, {word: "中文", pinyin: "zhōngwén"}, {word: "语法", pinyin: "yǔfǎ"}, {word: "有点", pinyin: "yǒudiǎn"}, {word: "难", pinyin: "nán"} ]
+          chinese: [ {word: "虽然", pinyin: "suī rán"}, {word: "中文", pinyin: "zhōng wén"}, {word: "语法", pinyin: "yǔ fǎ"}, {word: "有点", pinyin: "yǒu diǎn"}, {word: "难", pinyin: "nán"} ]
         },
         {
           english: "it is very interesting.",
-          chinese: [ {word: "但是", pinyin: "dànshì"}, {word: "很有趣", pinyin: "hěn yǒuqù"} ]
+          chinese: [ {word: "但是", pinyin: "dàn shì"}, {word: "很有趣", pinyin: "hěn yǒu qù"} ]
         }
       ]
     }
@@ -267,6 +279,25 @@
   const jsonInput = document.getElementById('json-input');
   const loadJsonBtn = document.getElementById('load-json-btn');
   const clearJsonBtn = document.getElementById('clear-json-btn');
+
+  // Tone detection helper
+  function getToneFromSyllable(s) {
+    if (/[āēīōūǖĀĒĪŌŪǕ]/.test(s)) return 1; // Blue
+    if (/[áéíóúǘÁÉÍÓÚǗ]/.test(s)) return 2; // Green
+    if (/[ǎěǐǒǔǚǍĚǏǑǓǙ]/.test(s)) return 3; // Orange
+    if (/[àèìòùǜÀÈÌÒÙǛ]/.test(s)) return 4; // Red
+    return 0; // Neutral / Silver
+  }
+
+  function getToneColorVar(tone) {
+    switch(tone) {
+      return 1: return 'var(--tone-1)';
+      case 2: return 'var(--tone-2)';
+      case 3: return 'var(--tone-3)';
+      case 4: return 'var(--tone-4)';
+      default: return 'var(--tone-0)';
+    }
+  }
 
   function normalizeData(raw) {
     return raw.map(s => {
@@ -382,11 +413,26 @@
       el.appendChild(pinyinSpan);
     }
 
-    const charSpan = document.createElement('span');
-    charSpan.className = 'char-text';
-    charSpan.innerText = tileObj.word;
-    el.appendChild(charSpan);
+    const charContainer = document.createElement('div');
+    charContainer.className = 'char-container';
 
+    const chars = Array.from(tileObj.word || '');
+    const syllables = (tileObj.pinyin || '').trim().split(/\s+/);
+
+    chars.forEach((char, idx) => {
+      const charSpan = document.createElement('span');
+      charSpan.className = 'char-text';
+      charSpan.innerText = char;
+
+      // Match tone for each individual character based on syllable position
+      const syllable = syllables[idx] || syllables[0] || '';
+      const tone = getToneFromSyllable(syllable);
+      charSpan.style.color = getToneColorVar(tone);
+
+      charContainer.appendChild(charSpan);
+    });
+
+    el.appendChild(charContainer);
     return el;
   }
 
@@ -426,7 +472,7 @@
       sentenceZone.appendChild(activeGroup);
     }
 
-    // 3. Render Word Bank with Subtle Active Clause Highlights
+    // 3. Render Word Bank with Tone Colors & Active Clause Highlights
     wordBankEl.innerHTML = '';
     wordBank.forEach(tileObj => {
       const btn = createTileElement(tileObj, false);
