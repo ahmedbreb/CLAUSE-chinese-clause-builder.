@@ -11,6 +11,7 @@
       --accent: #3b82f6;
       --accent-hover: #2563eb;
       --pinyin-color: #94a3b8;
+      --gloss-color: #38bdf8;
       --success: #10b981;
       --error: #ef4444;
       --text: #f8fafc;
@@ -52,7 +53,7 @@
     .english-clause-item.active { color: #ffffff; background: rgba(59, 130, 246, 0.15); border-left-color: var(--accent); font-weight: 600; box-shadow: 0 2px 8px rgba(59,130,246,0.1); }
     .english-clause-item.completed { color: #a7f3d0; background: rgba(16, 185, 129, 0.1); border-left-color: var(--success); opacity: 0.8; }
 
-    /* Sentence Build Area - Fixed height with auto-scroll to keep current active clause in view */
+    /* Sentence Build Area - Fixed height with auto-scroll */
     .sentence-zone { 
       height: 130px; 
       min-height: 130px; 
@@ -78,6 +79,7 @@
 
     /* Word Bank Header */
     .word-bank-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+    .word-bank-actions { display: flex; gap: 6px; }
     
     /* Tiny Active Clause Hint right above word bank */
     .active-clause-hint {
@@ -89,7 +91,7 @@
       opacity: 0.9;
     }
 
-    /* Word Tiles with Tone Colors */
+    /* Word Tiles */
     .tile { 
       background: var(--tile-bg); 
       color: var(--text); 
@@ -115,6 +117,20 @@
       margin-bottom: 2px;
       opacity: 0.50; 
       transition: opacity 0.15s ease, color 0.15s ease;
+    }
+
+    .tile .gloss-text {
+      font-size: 0.70rem;
+      color: var(--gloss-color);
+      font-weight: 500;
+      line-height: 1.1;
+      margin-top: 2px;
+      display: none; /* Hidden by default */
+    }
+
+    /* Active Gloss State */
+    .show-gloss .tile .gloss-text {
+      display: block;
     }
 
     .tile .char-container {
@@ -163,6 +179,7 @@
     .btn { background: var(--tile-bg); color: var(--text); border: none; padding: 10px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s; font-size: 0.9rem; }
     .btn:hover { background: var(--tile-hover); }
     .btn-sm { padding: 6px 12px; font-size: 0.8rem; }
+    .btn.active-toggle { background: var(--accent); color: white; }
     .btn-primary { background: var(--accent); }
     .btn-primary:hover { background: var(--accent-hover); }
 
@@ -183,7 +200,7 @@
     <p class="subtitle">Mistakes reset only the current clause checkpoint!</p>
   </header>
 
-  <div class="card">
+  <div class="card" id="game-card">
     <div class="progress-bar">
       <span id="sentence-counter">Sentence 1 of 10</span>
       <div class="dots" id="dots-container"></div>
@@ -200,10 +217,13 @@
     <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 6px;">Tap words in correct order:</p>
     <div class="sentence-zone" id="sentence-zone"></div>
 
-    <!-- Word Bank Header with Tiny Active Clause Hint -->
+    <!-- Word Bank Header with Reset & Gloss Toggle -->
     <div class="word-bank-header">
       <span style="font-size: 0.8rem; color: var(--text-muted);">Word Bank:</span>
-      <button class="btn btn-sm" id="reset-clause-btn">🔄 Reset Clause</button>
+      <div class="word-bank-actions">
+        <button class="btn btn-sm" id="toggle-gloss-btn">🔤 Gloss: OFF</button>
+        <button class="btn btn-sm" id="reset-clause-btn">🔄 Reset Clause</button>
+      </div>
     </div>
     <div id="active-clause-hint" class="active-clause-hint"></div>
     
@@ -232,11 +252,21 @@
       clauses: [
         {
           english: "I want to drink hot tea today",
-          chinese: [ {word: "我", pinyin: "wǒ"}, {word: "今天", pinyin: "jīn tiān"}, {word: "想", pinyin: "xiǎng"}, {word: "喝", pinyin: "hē"}, {word: "热茶", pinyin: "rè chá"} ]
+          chinese: [ 
+            {word: "我", pinyin: "wǒ", gloss: "I"}, 
+            {word: "今天", pinyin: "jīn tiān", gloss: "today"}, 
+            {word: "想", pinyin: "xiǎng", gloss: "want"}, 
+            {word: "喝", pinyin: "hē", gloss: "drink"}, 
+            {word: "热茶", pinyin: "rè chá", gloss: "hot tea"} 
+          ]
         },
         {
           english: "because I have a cold.",
-          chinese: [ {word: "因为", pinyin: "yīn wèi"}, {word: "我", pinyin: "wǒ"}, {word: "感冒了", pinyin: "gǎn mào le"} ]
+          chinese: [ 
+            {word: "因为", pinyin: "yīn wèi", gloss: "because"}, 
+            {word: "我", pinyin: "wǒ", gloss: "I"}, 
+            {word: "感冒了", pinyin: "gǎn mào le", gloss: "catch cold"} 
+          ]
         }
       ]
     },
@@ -245,11 +275,20 @@
       clauses: [
         {
           english: "Although Chinese grammar is difficult,",
-          chinese: [ {word: "虽然", pinyin: "suī rán"}, {word: "中文", pinyin: "zhōng wén"}, {word: "语法", pinyin: "yǔ fǎ"}, {word: "有点", pinyin: "yǒu diǎn"}, {word: "难", pinyin: "nán"} ]
+          chinese: [ 
+            {word: "虽然", pinyin: "suī rán", gloss: "although"}, 
+            {word: "中文", pinyin: "zhōng wén", gloss: "Chinese"}, 
+            {word: "语法", pinyin: "yǔ fǎ", gloss: "grammar"}, 
+            {word: "有点", pinyin: "yǒu diǎn", gloss: "a bit"}, 
+            {word: "难", pinyin: "nán", gloss: "difficult"} 
+          ]
         },
         {
           english: "it is very interesting.",
-          chinese: [ {word: "但是", pinyin: "dàn shì"}, {word: "很有趣", pinyin: "hěn yǒu qù"} ]
+          chinese: [ 
+            {word: "但是", pinyin: "dàn shì", gloss: "but"}, 
+            {word: "很有趣", pinyin: "hěn yǒu qù", gloss: "very interesting"} 
+          ]
         }
       ]
     }
@@ -264,7 +303,9 @@
   let usedTileIds = new Set();
   let activeClauseTiles = [];
   let completedClauseGroups = [];
+  let showGloss = false;
 
+  const gameCard = document.getElementById('game-card');
   const englishEl = document.getElementById('english-text');
   const clauseTracker = document.getElementById('clause-tracker');
   const clauseTrackerList = document.getElementById('clause-tracker-list');
@@ -275,6 +316,7 @@
   const dotsEl = document.getElementById('dots-container');
   const nextBtn = document.getElementById('next-btn');
   const resetClauseBtn = document.getElementById('reset-clause-btn');
+  const toggleGlossBtn = document.getElementById('toggle-gloss-btn');
   const jsonToggle = document.getElementById('json-toggle');
   const jsonCard = document.getElementById('json-card');
   const jsonInput = document.getElementById('json-input');
@@ -283,11 +325,11 @@
 
   // Tone detection helper
   function getToneFromSyllable(s) {
-    if (/[āēīōūǖĀĒĪŌŪǕ]/.test(s)) return 1; // Blue
-    if (/[áéíóúǘÁÉÍÓÚǗ]/.test(s)) return 2; // Green
-    if (/[ǎěǐǒǔǚǍĚǏǑǓǙ]/.test(s)) return 3; // Orange
-    if (/[àèìòùǜÀÈÌÒÙǛ]/.test(s)) return 4; // Red
-    return 0; // Neutral / Silver
+    if (/[āēīōūǖĀĒĪŌŪǕ]/.test(s)) return 1;
+    if (/[áéíóúǘÁÉÍÓÚǗ]/.test(s)) return 2;
+    if (/[ǎěǐǒǔǚǍĚǏǑǓǙ]/.test(s)) return 3;
+    if (/[àèìòùǜÀÈÌÒÙǛ]/.test(s)) return 4;
+    return 0;
   }
 
   function getToneColorVar(tone) {
@@ -310,7 +352,8 @@
               english: c.english || `Clause ${cIdx + 1}`,
               chinese: c.chinese.map(item => ({
                 word: item.word || item.char || '',
-                pinyin: item.pinyin || ''
+                pinyin: item.pinyin || '',
+                gloss: item.gloss || ''
               }))
             };
           }
@@ -318,8 +361,8 @@
             return {
               english: `Clause ${cIdx + 1}`,
               chinese: c.map(item => {
-                if (typeof item === 'string') return { word: item, pinyin: '' };
-                return { word: item.word || item.char || '', pinyin: item.pinyin || '' };
+                if (typeof item === 'string') return { word: item, pinyin: '', gloss: '' };
+                return { word: item.word || item.char || '', pinyin: item.pinyin || '', gloss: item.gloss || '' };
               })
             };
           }
@@ -374,6 +417,7 @@
           id: `tile-${cIdx}-${wIdx}-${Math.random().toString(36).substr(2, 6)}`,
           word: wordObj.word,
           pinyin: wordObj.pinyin,
+          gloss: wordObj.gloss,
           clauseIdx: cIdx
         });
       });
@@ -433,6 +477,14 @@
     });
 
     el.appendChild(charContainer);
+
+    if (tileObj.gloss) {
+      const glossSpan = document.createElement('span');
+      glossSpan.className = 'gloss-text';
+      glossSpan.innerText = tileObj.gloss;
+      el.appendChild(glossSpan);
+    }
+
     return el;
   }
 
@@ -472,7 +524,7 @@
       sentenceZone.appendChild(activeGroup);
     }
 
-    // 3. Render Word Bank with Subtle Active Clause Highlights
+    // 3. Render Word Bank with Tone Colors & Active Clause Highlights
     wordBankEl.innerHTML = '';
     wordBank.forEach(tileObj => {
       const btn = createTileElement(tileObj, false);
@@ -492,9 +544,18 @@
       wordBankEl.appendChild(btn);
     });
 
-    renderDots();
+    // Toggle gloss class on game card
+    if (showGloss) {
+      gameCard.classList.add('show-gloss');
+      toggleGlossBtn.innerText = '🔤 Gloss: ON';
+      toggleGlossBtn.classList.add('active-toggle');
+    } else {
+      gameCard.classList.remove('show-gloss');
+      toggleGlossBtn.innerText = '🔤 Gloss: OFF';
+      toggleGlossBtn.classList.remove('active-toggle');
+    }
 
-    // AUTO-SCROLL SENTENCE ZONE TO BOTTOM SO CURRENT CLAUSE IS ALWAYS VISIBLE
+    renderDots();
     sentenceZone.scrollTop = sentenceZone.scrollHeight;
   }
 
@@ -507,7 +568,6 @@
       activeClauseTiles.push(tileObj);
       currentWordInClauseIdx++;
 
-      // Clause Completed?
       if (currentWordInClauseIdx >= currentSentence.clauses[currentClauseIdx].chinese.length) {
         completedClauseGroups.push([...activeClauseTiles]);
         activeClauseTiles = [];
@@ -515,7 +575,6 @@
         currentWordInClauseIdx = 0;
       }
 
-      // Entire Sentence Completed?
       if (currentClauseIdx >= currentSentence.clauses.length) {
         nextBtn.style.display = 'inline-block';
       }
@@ -532,6 +591,12 @@
       renderBoard();
     }
   }
+
+  // Toggle Gloss Button
+  toggleGlossBtn.onclick = () => {
+    showGloss = !showGloss;
+    renderBoard();
+  };
 
   resetClauseBtn.onclick = () => {
     nextBtn.style.display = 'none';
