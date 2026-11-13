@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -164,7 +163,9 @@
     .tile.locked .pinyin-text { color: #6ee7b7; opacity: 0.75; }
 
     /* Word Bank */
-    .word-bank { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; min-height: 100px; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 10px; }
+    .word-bank { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; min-height: 100px; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 10px; transition: background 0.2s; }
+    .word-bank.clickable-reset { cursor: pointer; border: 1px dashed rgba(16, 185, 129, 0.4); }
+    .word-bank.clickable-reset:hover { background: rgba(16, 185, 129, 0.05); }
 
     /* Controls */
     .controls { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 20px; }
@@ -211,7 +212,7 @@
 
     <!-- Word Bank Header with Gloss & Reset -->
     <div class="word-bank-header">
-      <span style="font-size: 0.8rem; color: var(--text-muted);">Current Clause Word Bank:</span>
+      <span style="font-size: 0.8rem; color: var(--text-muted);" id="word-bank-label">Current Clause Word Bank:</span>
       <div class="word-bank-actions">
         <button class="btn btn-sm" id="toggle-gloss-btn">🔤 Gloss: OFF</button>
         <button class="btn btn-sm" id="reset-clause-btn">🔄 Clear Draft</button>
@@ -276,7 +277,7 @@
   let clauseWordBank = [];
   let usedTileIds = new Set();
   let activeClauseTiles = [];
-  let completedClausesMap = {}; // Tracks completed status and tiles for each clause index
+  let completedClausesMap = {};
   let showGloss = false;
 
   const gameCard = document.getElementById('game-card');
@@ -286,6 +287,7 @@
   const activeClauseHint = document.getElementById('active-clause-hint');
   const sentenceZone = document.getElementById('sentence-zone');
   const wordBankEl = document.getElementById('word-bank');
+  const wordBankLabel = document.getElementById('word-bank-label');
   const counterEl = document.getElementById('sentence-counter');
   const dotsEl = document.getElementById('dots-container');
   const nextSentenceBtn = document.getElementById('next-sentence-btn');
@@ -395,7 +397,6 @@
     const currentSentence = sentences[currentIdx];
     const clauseObj = currentSentence.clauses[currentClauseIdx];
 
-    // Build word bank exclusively for THIS current clause
     let tiles = [];
     clauseObj.chinese.forEach((wordObj, wIdx) => {
       tiles.push({
@@ -427,7 +428,6 @@
         div.innerText = `${idx + 1}. ${cObj.english}`;
       }
 
-      // Allow clicking tracker items to jump to clauses manually
       div.style.cursor = 'pointer';
       div.onclick = () => {
         loadClause(idx);
@@ -490,7 +490,7 @@
     activeClauseHint.innerText = `🎯 Target Clause: "${activeClauseObj.english}"`;
     activeClauseHint.style.display = 'block';
 
-    // 1. Render all clauses in sentence zone (completed ones locked, current one interactive or completed)
+    // 1. Render all clauses in sentence zone
     currentSentence.clauses.forEach((cObj, idx) => {
       if (completedClausesMap[idx]) {
         const group = document.createElement('div');
@@ -502,7 +502,7 @@
       }
     });
 
-    // 2. Render Active Clause Draft if not yet completed
+    // 2. Render Active Clause Draft
     if (!completedClausesMap[currentClauseIdx]) {
       const activeGroup = document.createElement('div');
       activeGroup.className = 'clause-group active-draft';
@@ -512,17 +512,35 @@
       sentenceZone.appendChild(activeGroup);
     }
 
-    // 3. Render Scrambled Word Bank for CURRENT clause only
+    // 3. Render Scrambled Word Bank
     wordBankEl.innerHTML = '';
+    const isClauseDone = !!completedClausesMap[currentClauseIdx];
+
+    if (isClauseDone) {
+      wordBankEl.classList.add('clickable-reset');
+      wordBankLabel.innerText = 'Current Clause Word Bank (Tap here to reset & practice again):';
+      wordBankEl.onclick = () => {
+        delete completedClausesMap[currentClauseIdx];
+        loadClause(currentClauseIdx);
+      };
+    } else {
+      wordBankEl.classList.remove('clickable-reset');
+      wordBankLabel.innerText = 'Current Clause Word Bank:';
+      wordBankEl.onclick = null;
+    }
+
     clauseWordBank.forEach(tileObj => {
       const btn = createTileElement(tileObj, false);
       btn.tagName = 'BUTTON';
 
       const isUsed = usedTileIds.has(tileObj.id);
-      if (isUsed) {
+      if (isUsed || isClauseDone) {
         btn.setAttribute('disabled', 'true');
       } else {
-        btn.onclick = () => handleTileClick(tileObj);
+        btn.onclick = (e) => {
+          e.stopPropagation(); // Prevent triggering word bank click handler
+          handleTileClick(tileObj);
+        };
       }
 
       wordBankEl.appendChild(btn);
@@ -531,12 +549,11 @@
     // Navigation buttons visibility
     prevClauseBtn.style.display = currentClauseIdx > 0 ? 'inline-block' : 'none';
 
-    if (completedClausesMap[currentClauseIdx]) {
+    if (isClauseDone) {
       if (currentClauseIdx < currentSentence.clauses.length - 1) {
         nextClauseBtn.style.display = 'inline-block';
         nextSentenceBtn.style.display = 'none';
       } else {
-        // Last clause finished -> show Next Sentence if all clauses are done
         const allDone = currentSentence.clauses.every((_, i) => completedClausesMap[i]);
         if (allDone) {
           nextClauseBtn.style.display = 'none';
@@ -571,7 +588,6 @@
       activeClauseTiles.push(tileObj);
       currentWordInClauseIdx++;
 
-      // Clause Successfully Completed!
       if (currentWordInClauseIdx >= currentSentence.clauses[currentClauseIdx].chinese.length) {
         completedClausesMap[currentClauseIdx] = [...activeClauseTiles];
         activeClauseTiles = [];
@@ -590,7 +606,6 @@
     }
   }
 
-  // Next Clause Button
   nextClauseBtn.onclick = () => {
     const currentSentence = sentences[currentIdx];
     if (currentClauseIdx < currentSentence.clauses.length - 1) {
@@ -598,21 +613,17 @@
     }
   };
 
-  // Prev Clause Button
   prevClauseBtn.onclick = () => {
     if (currentClauseIdx > 0) {
       loadClause(currentClauseIdx - 1);
     }
   };
 
-  // Reset Draft for Current Clause
   resetClauseBtn.onclick = () => {
-    // If clause was marked completed, clear its completion status so user can practice it again
     delete completedClausesMap[currentClauseIdx];
     loadClause(currentClauseIdx);
   };
 
-  // Next Sentence Button
   nextSentenceBtn.onclick = () => {
     if (currentIdx < sentences.length - 1) {
       currentIdx++;
