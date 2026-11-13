@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -125,10 +126,9 @@
       font-weight: 500;
       line-height: 1.1;
       margin-top: 2px;
-      display: none; /* Hidden by default */
+      display: none;
     }
 
-    /* Active Gloss State */
     .show-gloss .tile .gloss-text {
       display: block;
     }
@@ -150,14 +150,6 @@
     }
 
     .tile:hover:not(:disabled) { background: var(--tile-hover); transform: translateY(-2px); }
-    
-    .tile.active-clause-tile:not(:disabled) {
-      background: #1e293b;
-      border: 1px solid rgba(96, 165, 250, 0.4);
-    }
-    .tile.active-clause-tile:hover:not(:disabled) {
-      background: #334155;
-    }
 
     .tile:disabled, .tile[disabled] { 
       opacity: 0.15 !important; 
@@ -197,7 +189,7 @@
 <div class="container">
   <header>
     <h1>Chinese Clause Builder</h1>
-    <p class="subtitle">Mistakes reset only the current clause checkpoint!</p>
+    <p class="subtitle">Focus clause by clause & practice at your own pace!</p>
   </header>
 
   <div class="card" id="game-card">
@@ -210,19 +202,19 @@
 
     <!-- Visual Clause Correspondence Tracker -->
     <div class="clause-tracker" id="clause-tracker" style="display: none;">
-      <div class="clause-tracker-title">Clause Breakdown & Target:</div>
+      <div class="clause-tracker-title">Clause Breakdown & Navigation:</div>
       <div id="clause-tracker-list"></div>
     </div>
 
     <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 6px;">Tap words in correct order:</p>
     <div class="sentence-zone" id="sentence-zone"></div>
 
-    <!-- Word Bank Header with Reset & Gloss Toggle -->
+    <!-- Word Bank Header with Gloss & Reset -->
     <div class="word-bank-header">
-      <span style="font-size: 0.8rem; color: var(--text-muted);">Word Bank:</span>
+      <span style="font-size: 0.8rem; color: var(--text-muted);">Current Clause Word Bank:</span>
       <div class="word-bank-actions">
         <button class="btn btn-sm" id="toggle-gloss-btn">🔤 Gloss: OFF</button>
-        <button class="btn btn-sm" id="reset-clause-btn">🔄 Reset Clause</button>
+        <button class="btn btn-sm" id="reset-clause-btn">🔄 Clear Draft</button>
       </div>
     </div>
     <div id="active-clause-hint" class="active-clause-hint"></div>
@@ -231,7 +223,11 @@
 
     <div class="controls">
       <button class="btn" id="json-toggle">📥 Load New JSON</button>
-      <button class="btn btn-primary" id="next-btn" style="display: none;">Next Sentence ➔</button>
+      <div style="display: flex; gap: 8px;">
+        <button class="btn" id="prev-clause-btn" style="display: none;">← Prev Clause</button>
+        <button class="btn btn-primary" id="next-clause-btn" style="display: none;">Next Clause ➔</button>
+        <button class="btn btn-primary" id="next-sentence-btn" style="display: none;">Next Sentence ➔</button>
+      </div>
     </div>
   </div>
 
@@ -269,28 +265,6 @@
           ]
         }
       ]
-    },
-    {
-      english: "Although Chinese grammar is difficult, it is very interesting.",
-      clauses: [
-        {
-          english: "Although Chinese grammar is difficult,",
-          chinese: [ 
-            {word: "虽然", pinyin: "suī rán", gloss: "although"}, 
-            {word: "中文", pinyin: "zhōng wén", gloss: "Chinese"}, 
-            {word: "语法", pinyin: "yǔ fǎ", gloss: "grammar"}, 
-            {word: "有点", pinyin: "yǒu diǎn", gloss: "a bit"}, 
-            {word: "难", pinyin: "nán", gloss: "difficult"} 
-          ]
-        },
-        {
-          english: "it is very interesting.",
-          chinese: [ 
-            {word: "但是", pinyin: "dàn shì", gloss: "but"}, 
-            {word: "很有趣", pinyin: "hěn yǒu qù", gloss: "very interesting"} 
-          ]
-        }
-      ]
     }
   ];
 
@@ -299,10 +273,10 @@
   
   let currentClauseIdx = 0;
   let currentWordInClauseIdx = 0;
-  let wordBank = [];
+  let clauseWordBank = [];
   let usedTileIds = new Set();
   let activeClauseTiles = [];
-  let completedClauseGroups = [];
+  let completedClausesMap = {}; // Tracks completed status and tiles for each clause index
   let showGloss = false;
 
   const gameCard = document.getElementById('game-card');
@@ -314,7 +288,9 @@
   const wordBankEl = document.getElementById('word-bank');
   const counterEl = document.getElementById('sentence-counter');
   const dotsEl = document.getElementById('dots-container');
-  const nextBtn = document.getElementById('next-btn');
+  const nextSentenceBtn = document.getElementById('next-sentence-btn');
+  const nextClauseBtn = document.getElementById('next-clause-btn');
+  const prevClauseBtn = document.getElementById('prev-clause-btn');
   const resetClauseBtn = document.getElementById('reset-clause-btn');
   const toggleGlossBtn = document.getElementById('toggle-gloss-btn');
   const jsonToggle = document.getElementById('json-toggle');
@@ -323,7 +299,6 @@
   const loadJsonBtn = document.getElementById('load-json-btn');
   const clearJsonBtn = document.getElementById('clear-json-btn');
 
-  // Tone detection helper
   function getToneFromSyllable(s) {
     if (/[āēīōūǖĀĒĪŌŪǕ]/.test(s)) return 1;
     if (/[áéíóúǘÁÉÍÓÚǗ]/.test(s)) return 2;
@@ -392,12 +367,10 @@
   }
 
   function loadSentence(index) {
-    nextBtn.style.display = 'none';
+    nextSentenceBtn.style.display = 'none';
+    nextClauseBtn.style.display = 'none';
     currentClauseIdx = 0;
-    currentWordInClauseIdx = 0;
-    usedTileIds.clear();
-    activeClauseTiles = [];
-    completedClauseGroups = [];
+    completedClausesMap = {};
     
     const item = sentences[index];
     counterEl.innerText = `Sentence ${index + 1} of ${sentences.length}`;
@@ -405,25 +378,35 @@
 
     if (item.clauses && item.clauses.length > 1) {
       clauseTracker.style.display = 'flex';
-      renderClauseTracker(item);
     } else {
       clauseTracker.style.display = 'none';
     }
 
+    loadClause(0);
+  }
+
+  function loadClause(cIdx) {
+    currentClauseIdx = cIdx;
+    currentWordInClauseIdx = 0;
+    usedTileIds.clear();
+    activeClauseTiles = [];
+    nextClauseBtn.style.display = 'none';
+
+    const currentSentence = sentences[currentIdx];
+    const clauseObj = currentSentence.clauses[currentClauseIdx];
+
+    // Build word bank exclusively for THIS current clause
     let tiles = [];
-    item.clauses.forEach((clauseObj, cIdx) => {
-      clauseObj.chinese.forEach((wordObj, wIdx) => {
-        tiles.push({
-          id: `tile-${cIdx}-${wIdx}-${Math.random().toString(36).substr(2, 6)}`,
-          word: wordObj.word,
-          pinyin: wordObj.pinyin,
-          gloss: wordObj.gloss,
-          clauseIdx: cIdx
-        });
+    clauseObj.chinese.forEach((wordObj, wIdx) => {
+      tiles.push({
+        id: `tile-${currentClauseIdx}-${wIdx}-${Math.random().toString(36).substr(2, 6)}`,
+        word: wordObj.word,
+        pinyin: wordObj.pinyin,
+        gloss: wordObj.gloss
       });
     });
 
-    wordBank = tiles.sort(() => Math.random() - 0.5);
+    clauseWordBank = tiles.sort(() => Math.random() - 0.5);
     renderBoard();
   }
 
@@ -433,7 +416,7 @@
       const div = document.createElement('div');
       div.className = 'english-clause-item';
       
-      if (idx < currentClauseIdx) {
+      if (completedClausesMap[idx]) {
         div.className += ' completed';
         div.innerText = `✓ ${cObj.english}`;
       } else if (idx === currentClauseIdx) {
@@ -443,6 +426,13 @@
         div.className += ' upcoming';
         div.innerText = `${idx + 1}. ${cObj.english}`;
       }
+
+      // Allow clicking tracker items to jump to clauses manually
+      div.style.cursor = 'pointer';
+      div.onclick = () => {
+        loadClause(idx);
+      };
+
       clauseTrackerList.appendChild(div);
     });
   }
@@ -496,26 +486,24 @@
       renderClauseTracker(currentSentence);
     }
 
-    if (currentSentence.clauses && currentSentence.clauses[currentClauseIdx]) {
-      const activeClauseObj = currentSentence.clauses[currentClauseIdx];
-      activeClauseHint.innerText = `🎯 Target Clause: "${activeClauseObj.english}"`;
-      activeClauseHint.style.display = 'block';
-    } else {
-      activeClauseHint.style.display = 'none';
-    }
+    const activeClauseObj = currentSentence.clauses[currentClauseIdx];
+    activeClauseHint.innerText = `🎯 Target Clause: "${activeClauseObj.english}"`;
+    activeClauseHint.style.display = 'block';
 
-    // 1. Render Completed Clause Checkpoints
-    completedClauseGroups.forEach((groupTiles) => {
-      const group = document.createElement('div');
-      group.className = 'clause-group completed';
-      groupTiles.forEach(tileObj => {
-        group.appendChild(createTileElement(tileObj, true));
-      });
-      sentenceZone.appendChild(group);
+    // 1. Render all clauses in sentence zone (completed ones locked, current one interactive or completed)
+    currentSentence.clauses.forEach((cObj, idx) => {
+      if (completedClausesMap[idx]) {
+        const group = document.createElement('div');
+        group.className = 'clause-group completed';
+        completedClausesMap[idx].forEach(tileObj => {
+          group.appendChild(createTileElement(tileObj, true));
+        });
+        sentenceZone.appendChild(group);
+      }
     });
 
-    // 2. Render Active Clause Progress
-    if (activeClauseTiles.length > 0 || currentClauseIdx < currentSentence.clauses.length) {
+    // 2. Render Active Clause Draft if not yet completed
+    if (!completedClausesMap[currentClauseIdx]) {
       const activeGroup = document.createElement('div');
       activeGroup.className = 'clause-group active-draft';
       activeClauseTiles.forEach(tileObj => {
@@ -524,15 +512,11 @@
       sentenceZone.appendChild(activeGroup);
     }
 
-    // 3. Render Word Bank with Tone Colors & Active Clause Highlights
+    // 3. Render Scrambled Word Bank for CURRENT clause only
     wordBankEl.innerHTML = '';
-    wordBank.forEach(tileObj => {
+    clauseWordBank.forEach(tileObj => {
       const btn = createTileElement(tileObj, false);
       btn.tagName = 'BUTTON';
-      
-      if (currentSentence.clauses.length > 1 && tileObj.clauseIdx === currentClauseIdx) {
-        btn.classList.add('active-clause-tile');
-      }
 
       const isUsed = usedTileIds.has(tileObj.id);
       if (isUsed) {
@@ -544,7 +528,26 @@
       wordBankEl.appendChild(btn);
     });
 
-    // Toggle gloss class on game card
+    // Navigation buttons visibility
+    prevClauseBtn.style.display = currentClauseIdx > 0 ? 'inline-block' : 'none';
+
+    if (completedClausesMap[currentClauseIdx]) {
+      if (currentClauseIdx < currentSentence.clauses.length - 1) {
+        nextClauseBtn.style.display = 'inline-block';
+        nextSentenceBtn.style.display = 'none';
+      } else {
+        // Last clause finished -> show Next Sentence if all clauses are done
+        const allDone = currentSentence.clauses.every((_, i) => completedClausesMap[i]);
+        if (allDone) {
+          nextClauseBtn.style.display = 'none';
+          nextSentenceBtn.style.display = 'inline-block';
+        }
+      }
+    } else {
+      nextClauseBtn.style.display = 'none';
+    }
+
+    // Gloss state
     if (showGloss) {
       gameCard.classList.add('show-gloss');
       toggleGlossBtn.innerText = '🔤 Gloss: ON';
@@ -568,15 +571,10 @@
       activeClauseTiles.push(tileObj);
       currentWordInClauseIdx++;
 
+      // Clause Successfully Completed!
       if (currentWordInClauseIdx >= currentSentence.clauses[currentClauseIdx].chinese.length) {
-        completedClauseGroups.push([...activeClauseTiles]);
+        completedClausesMap[currentClauseIdx] = [...activeClauseTiles];
         activeClauseTiles = [];
-        currentClauseIdx++;
-        currentWordInClauseIdx = 0;
-      }
-
-      if (currentClauseIdx >= currentSentence.clauses.length) {
-        nextBtn.style.display = 'inline-block';
       }
 
       renderBoard();
@@ -592,37 +590,41 @@
     }
   }
 
-  // Toggle Gloss Button
-  toggleGlossBtn.onclick = () => {
-    showGloss = !showGloss;
-    renderBoard();
-  };
-
-  resetClauseBtn.onclick = () => {
-    nextBtn.style.display = 'none';
-
-    if (activeClauseTiles.length > 0) {
-      activeClauseTiles.forEach(t => usedTileIds.delete(t.id));
-      activeClauseTiles = [];
-      currentWordInClauseIdx = 0;
-    } else if (completedClauseGroups.length > 0) {
-      const poppedGroup = completedClauseGroups.pop();
-      poppedGroup.forEach(t => usedTileIds.delete(t.id));
-      currentClauseIdx--;
-      currentWordInClauseIdx = 0;
-      activeClauseTiles = [];
+  // Next Clause Button
+  nextClauseBtn.onclick = () => {
+    const currentSentence = sentences[currentIdx];
+    if (currentClauseIdx < currentSentence.clauses.length - 1) {
+      loadClause(currentClauseIdx + 1);
     }
-
-    renderBoard();
   };
 
-  nextBtn.onclick = () => {
+  // Prev Clause Button
+  prevClauseBtn.onclick = () => {
+    if (currentClauseIdx > 0) {
+      loadClause(currentClauseIdx - 1);
+    }
+  };
+
+  // Reset Draft for Current Clause
+  resetClauseBtn.onclick = () => {
+    // If clause was marked completed, clear its completion status so user can practice it again
+    delete completedClausesMap[currentClauseIdx];
+    loadClause(currentClauseIdx);
+  };
+
+  // Next Sentence Button
+  nextSentenceBtn.onclick = () => {
     if (currentIdx < sentences.length - 1) {
       currentIdx++;
       loadSentence(currentIdx);
     } else {
-      alert('🎉 Excellent job! You finished all sentences in this set!');
+      alert('🎉 Fantastic job! You finished all sentences in this set!');
     }
+  };
+
+  toggleGlossBtn.onclick = () => {
+    showGloss = !showGloss;
+    renderBoard();
   };
 
   jsonToggle.onclick = () => {
