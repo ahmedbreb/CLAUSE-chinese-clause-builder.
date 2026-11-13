@@ -52,7 +52,7 @@
     .english-clause-item.active { color: #ffffff; background: rgba(59, 130, 246, 0.15); border-left-color: var(--accent); font-weight: 600; box-shadow: 0 2px 8px rgba(59,130,246,0.1); }
     .english-clause-item.completed { color: #a7f3d0; background: rgba(16, 185, 129, 0.1); border-left-color: var(--success); opacity: 0.8; }
 
-    /* Sentence Build Area - Fixed height with internal scroll to keep word bank locked in place */
+    /* Sentence Build Area - Fixed height with auto-scroll to keep current active clause in view */
     .sentence-zone { 
       height: 130px; 
       min-height: 130px; 
@@ -67,6 +67,7 @@
       align-content: flex-start; 
       margin-bottom: 20px; 
       transition: border-color 0.2s; 
+      scroll-behavior: smooth;
     }
     .sentence-zone.wrong { border-color: var(--error); animation: shake 0.3s; }
     
@@ -424,7 +425,6 @@
       charSpan.className = 'char-text';
       charSpan.innerText = char;
 
-      // Match tone for each individual character based on syllable position
       const syllable = syllables[idx] || syllables[0] || '';
       const tone = getToneFromSyllable(syllable);
       charSpan.style.color = getToneColorVar(tone);
@@ -472,7 +472,7 @@
       sentenceZone.appendChild(activeGroup);
     }
 
-    // 3. Render Word Bank with Tone Colors & Active Clause Highlights
+    // 3. Render Word Bank with Subtle Active Clause Highlights
     wordBankEl.innerHTML = '';
     wordBank.forEach(tileObj => {
       const btn = createTileElement(tileObj, false);
@@ -493,6 +493,9 @@
     });
 
     renderDots();
+
+    // AUTO-SCROLL SENTENCE ZONE TO BOTTOM SO CURRENT CLAUSE IS ALWAYS VISIBLE
+    sentenceZone.scrollTop = sentenceZone.scrollHeight;
   }
 
   function handleTileClick(tileObj) {
